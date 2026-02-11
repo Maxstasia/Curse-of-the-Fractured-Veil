@@ -1,0 +1,25 @@
+Curse of the Fractured Veil - Credits
+
+Game & Code by Maxstasia
+
+Assets used (all free from itch.io):
+
+- Dungeon tiles & environment: Pixel_Poem
+  → https://pixel-poem.itch.io/dungeon-assetpuck
+  (Credit appreciated)
+
+- Character sprites: Zerie
+  → https://zerie.itch.io/tiny-rpg-character-asset-pack
+
+- UI elements: ToffeeCraft
+  → https://toffeecraft.itch.io/ui-user-interface-mega-pack
+  (Personal use – check license for commercial)
+
+- Weapons & items: Pixel Frog
+  → https://pixelfrog-assets.itch.io/tiny-swords
+  (Credit appreciated)
+
+Made with Raylib / SDL2 / C/C++ at 42 school.
+
+Thanks to the creators for these awesome free assets!
+
