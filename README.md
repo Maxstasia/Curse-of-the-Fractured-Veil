@@ -3,36 +3,36 @@
 
 Un roguelite top-down action codé en C/C++ pur, inspiré de *The Binding of Isaac* et *Hades*.
 
-Projet solo hardcore pour progresser en profondeur : gestion manuelle de la mémoire, ECS léger/custom, rendu 2D avec Raylib ou SDL2, maths vectorielles from scratch, salles procédurales, synergies d’items, meta-progression, etc.
+Projet solo hardcore pour progresser en profondeur : gestion manuelle de la mémoire, ECS léger/custom, rendu 2D avec SFML, maths vectorielles from scratch, salles procédurales, synergies d’items, meta-progression, etc.
 
 Objectif : un dungeon crawler nerveux run-based avec  
 - combat orienté dash (style Hades)  
 - système d’items combinatoires explosifs (style Isaac)  
 - mort → upgrades permanents meta  
-- 100 % sans moteur de jeu (C99 / C++17/20)
+- 100 % sans moteur de jeu (C++17/20)
 
 **Pourquoi ce projet ?**  
 Maîtriser en profondeur : allocations dynamiques, object pools, partitionnement spatial (quadtree ou grid simple), optimisation 60 fps, state machines, sérialisation basique pour les saves meta, etc.
 
 ### État actuel (février 2026)
-- [ ] Setup build (Makefile + CMake)  
-- [ ] Fenêtre + input de base (clavier + souris)  
-- [ ] Joueur : déplacement + dash + attaque de base  
-- [ ] Système entités ultra simple (struct + arrays)  
-- [ ] Collisions AABB  
+- [x] Setup build (Makefile + SFML)  
+- [x] Fenêtre + input de base (clavier)  
+- [x] Joueur : déplacement + dash + attaque de base  
+- [x] Système entités ultra simple (struct + arrays)  
+- [x] Collisions AABB  
 - [ ] Premières salles statiques  
 - [ ] Mort + restart du run  
 - [ ] ...
 
 ### Roadmap (étapes progressives – MVP → cool → ambitieux)
 
-#### Phase 0 – Setup & boucle principale (1–2 semaines)
-1. Initialisation projet : CMakeLists.txt + main + .gitignore  
-2. Choix lib : Raylib (le plus rapide) ou SDL2 + OpenGL custom  
-3. Boucle game : 60 fps fixe + delta time  
-4. Input : WASD + souris + dash (space)  
-5. Joueur : position, vélocité, sprite basique (rectangle au début)  
-6. États du jeu : MENU → RUNNING → GAME_OVER → RESTART
+#### Phase 0 – Setup & boucle principale ✅ (DONE)
+1. ✅ Initialisation projet : Makefile + main + .gitignore  
+2. ✅ Choix lib : SFML (simple et rapide)  
+3. ✅ Boucle game : 60 fps fixe + delta time  
+4. ✅ Input : WASD + dash (space)  
+5. ✅ Joueur : position, vélocité, sprite basique (cercle)  
+6. ✅ États du jeu : MENU → RUNNING → GAME_OVER → RESTART
 
 #### Phase 1 – Combat & salles (3–6 semaines)
 7. Système entités : pool fixe ou dynamique (struct Entity { … })  

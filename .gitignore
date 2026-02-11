@@ -1,0 +1,23 @@
+# Build
+build/
+*.o
+*.a
+*.so
+
+# Binaires
+game
+*.exe
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Misc
+*.log
