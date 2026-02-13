@@ -18,7 +18,7 @@ enum class GameState {
 
 const int SCREEN_WIDTH = 2560;
 const int SCREEN_HEIGHT = 1440;
-const int TARGET_FPS = 120;
+const int TARGET_FPS = 60;
 
 // ============================================================================
 // STRUCTS
@@ -105,7 +105,6 @@ struct Game {
     
     Game();
     void init();
-	void play();
     void update(float dt);
     void draw() const;
     void handle_input();

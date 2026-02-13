@@ -11,11 +11,11 @@ Player::Player()
       speed(300.0f),
       radius(15.0f),
       hp(100.0f),
-      max_hp(100.0f),
+      max_hp(hp),
       dash_cooldown(1.0f),
       is_dashing(false),
       dash_duration(0),
-      dash_speed(600.0f) {}
+      dash_speed(50.0f) {}
 
 void Player::reset() {
     pos = Vector2f(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2);
@@ -69,7 +69,7 @@ void Player::update(float dt) {
 }
 
 void Player::draw() const {
-    Color player_color = is_dashing ? ORANGE : BLUE;
+    Color player_color = is_dashing ? YELLOW : BLUE;
     DrawCircleV({pos.x, pos.y}, radius, player_color);
     
     // HUD simple
@@ -112,10 +112,16 @@ void Entity::update(float dt, const Player& player) {
     if (!alive)
 		return;
     
-    // Se diriger vers le joueur
-    Vector2f dir = (player.pos - pos).normalized();
-    vel = dir * speed * dt;
-    pos = pos + vel;
+	// gestion des colisions
+	if (pos == player.pos) //TODO : ajoutez surcharge de ==
+		;
+	else
+	{
+    	// Se diriger vers le joueur
+    	Vector2f dir = (player.pos - pos).normalized();
+    	vel = dir * speed * dt;
+    	pos = pos + vel;
+	}
 }
 
 void Entity::draw() const {
@@ -223,8 +229,8 @@ void Game::handle_input() {
             // Dash
             if (player.dash_cooldown <= 0) {
                 player.is_dashing = true;
-                player.dash_duration = 0.15f;
-                player.dash_cooldown = 0.3f;
+                player.dash_duration = 0.2f;
+                player.dash_cooldown = 1.0f;
                 player.vel = player.vel.normalized() * player.dash_speed;
             }
         }
