@@ -2,7 +2,7 @@
 # ⚠️ IMPORTANT: Avant de compiler, exécute: make setup-raylib
 
 CXX = g++
-CXXFLAGS = -std=c++17 -Wall -Wextra -O2 -fPIC
+CXXFLAGS = -std=c++17 -Wall -Wextra -O2 -fPIC -MMD -MP
 LDFLAGS = -lm -lpthread -ldl -lrt -lX11
 
 # Répertoires
@@ -16,7 +16,11 @@ RAYLIB_SRC = $(RAYLIB_DIR)/src
 # Fichiers sources et objets
 SRCS = $(wildcard $(SRC_DIR)/*.cpp)
 OBJS = $(SRCS:$(SRC_DIR)/%.cpp=$(BUILD_DIR)/%.o)
+DEPS = $(OBJS:.o=.d)
 TARGET = $(BIN_DIR)/game
+
+# Inclure les fichiers de dépendances
+-include $(DEPS)
 
 # Raylib flags
 RAYLIB_CFLAGS = -I$(RAYLIB_SRC)
@@ -58,7 +62,7 @@ setup-raylib:
 	fi
 
 clean:
-	rm -rf $(BUILD_DIR)/*.o $(TARGET)
+	rm -rf $(BUILD_DIR)/*.o $(BUILD_DIR)/*.d $(TARGET)
 	@echo "🧹 Build artifacts cleaned"
 
 fclean: clean
@@ -68,9 +72,6 @@ fclean: clean
 run: all
 	$(TARGET)
 
-segfaultgrind: $(TARGET)
-	valgrind --tool=memcheck --leak-check=full --show-leak-kinds=all --track-fds=yes --track-origins=yes --suppressions=valgrind.supp ./$(TARGET)
-
 re : fclean all
 
-.PHONY: all clean clean-all run setup-raylib re segfaultgrind
+.PHONY: all clean clean-all run setup-raylib re

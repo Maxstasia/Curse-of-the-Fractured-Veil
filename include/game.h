@@ -3,6 +3,7 @@
 #include <raylib.h>
 #include <vector>
 #include <cmath>
+#include <algorithm>
 
 // ============================================================================
 // CONSTANTS & ENUMS
@@ -15,9 +16,9 @@ enum class GameState {
     PAUSE
 };
 
-const int SCREEN_WIDTH = 1280;
-const int SCREEN_HEIGHT = 720;
-const int TARGET_FPS = 60;
+const int SCREEN_WIDTH = 2560;
+const int SCREEN_HEIGHT = 1440;
+const int TARGET_FPS = 120;
 
 // ============================================================================
 // STRUCTS
@@ -104,6 +105,7 @@ struct Game {
     
     Game();
     void init();
+	void play();
     void update(float dt);
     void draw() const;
     void handle_input();

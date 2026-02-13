@@ -1,5 +1,4 @@
 #include "game.h"
-#include <algorithm>
 
 // ============================================================================
 // PLAYER
@@ -13,7 +12,7 @@ Player::Player()
       radius(15.0f),
       hp(100.0f),
       max_hp(100.0f),
-      dash_cooldown(0.3f),
+      dash_cooldown(1.0f),
       is_dashing(false),
       dash_duration(0),
       dash_speed(600.0f) {}
@@ -34,6 +33,10 @@ void Player::update(float dt) {
     if (IsKeyDown(KEY_S)) input.y += 1;
     if (IsKeyDown(KEY_A)) input.x -= 1;
     if (IsKeyDown(KEY_D)) input.x += 1;
+	if (IsKeyDown(KEY_UP)) input.y -= 1;
+	if (IsKeyDown(KEY_DOWN)) input.y += 1;
+	if (IsKeyDown(KEY_LEFT)) input.x -= 1;
+	if (IsKeyDown(KEY_RIGHT)) input.x += 1;
     
     // Normaliser input
     if (input.length() > 0) {
@@ -78,31 +81,50 @@ void Player::draw() const {
 // ENTITY
 // ============================================================================
 
-Entity::Entity(Type t, const Vector2f& p)
-    : type(t),
-      pos(p),
-      vel(0, 0),
-      radius(12.0f),
-      hp(30.0f),
-      max_hp(30.0f),
-      alive(true),
-      speed(150.0f) {}
+Entity::Entity(Type t, const Vector2f& p) : type(t), pos(p), vel(0, 0), alive(true) {
+	if (type == SKELETON){
+		radius = 12.0f;
+		hp = 30.0f;
+		max_hp = hp;
+		speed = 150.0f;
+	}
+	else if (type == VAMPIRE) {
+		radius = 8.0f;
+		hp = 20.0f;
+		max_hp = hp;
+		speed = 280.0f;
+	}
+	else if (type == PRIEST) {
+		radius = 30.0f;
+		hp = 40.0f;
+		max_hp = hp;
+		speed = 100.0f;
+	}
+	else {
+		radius = 12.0f;
+		hp = 30.0f;
+		max_hp = hp;
+		speed = 150.0f;
+	}
+}
 
 void Entity::update(float dt, const Player& player) {
-    if (!alive) return;
+    if (!alive)
+		return;
     
     // Se diriger vers le joueur
     Vector2f dir = (player.pos - pos).normalized();
-    vel = dir * speed;
-    pos = pos + vel * dt;
+    vel = dir * speed * dt;
+    pos = pos + vel;
 }
 
 void Entity::draw() const {
     if (!alive) return;
     
-    Color entity_color = RED;
-    if (type == VAMPIRE) entity_color = MAROON;
-    if (type == PRIEST) entity_color = MAGENTA;
+    Color entity_color = WHITE;
+	if (type == SKELETON) entity_color = GRAY;
+    if (type == VAMPIRE) entity_color = RED;
+    if (type == PRIEST) entity_color = GREEN;
     
     DrawCircleV({pos.x, pos.y}, radius, entity_color);
 }
@@ -119,21 +141,16 @@ Game::Game()
       wave(0) {}
 
 void Game::init() {
-    state = GameState::RUNNING;
-    player.reset();
-    enemies.clear();
+	state = GameState::MENU;
+	next_state = GameState::MENU;
     time_elapsed = 0;
     score = 0;
-    wave = 1;
-    
-    // Spawn quelques ennemis de test
-    spawn_enemy(Entity::SKELETON, Vector2f(200, 200));
-    spawn_enemy(Entity::SKELETON, Vector2f(SCREEN_WIDTH - 200, 200));
+    wave = 0;
 }
 
 void Game::update(float dt) {
     if (state != GameState::RUNNING) return;
-    
+	
     time_elapsed += dt;
     
     // Update joueur
@@ -169,15 +186,22 @@ void Game::update(float dt) {
     if (spawn_timer > 3.0f && enemies.size() < 10) {
         float x = GetRandomValue(50, SCREEN_WIDTH - 50);
         float y = GetRandomValue(50, SCREEN_HEIGHT - 50);
-        spawn_enemy(Entity::SKELETON, Vector2f(x, y));
+		int WhoSpawn = rand() % 3;
+		if (WhoSpawn == 0) {
+			spawn_enemy(Entity::SKELETON, Vector2f(x, y));
+		} else if (WhoSpawn == 1) {
+			spawn_enemy(Entity::VAMPIRE, Vector2f(x, y));
+		} else {
+			spawn_enemy(Entity::PRIEST, Vector2f(x, y));
+		}
         spawn_timer = 0;
     }
 }
 
 void Game::draw() const {
     if (state == GameState::MENU) {
-        DrawText("CURSE OF THE FRACTURED VEIL", SCREEN_WIDTH/2 - 300, SCREEN_HEIGHT/2 - 100, 40, WHITE);
-        DrawText("Press SPACE to start", SCREEN_WIDTH/2 - 150, SCREEN_HEIGHT/2 + 50, 20, GRAY);
+        DrawText("CURSE OF THE FRACTURED VEIL", SCREEN_WIDTH/4.07, SCREEN_HEIGHT/2 - 100, 40, WHITE);
+        DrawText("Press SPACE to start", SCREEN_WIDTH/2.37, SCREEN_HEIGHT/2 + 50, 20, GRAY);
     } else if (state == GameState::RUNNING) {
         player.draw();
         for (const auto& enemy : enemies) {
