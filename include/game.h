@@ -16,8 +16,8 @@ enum class GameState {
     PAUSE
 };
 
-const int SCREEN_WIDTH = 2560;
-const int SCREEN_HEIGHT = 1440;
+const int SCREEN_WIDTH = 1920;
+const int SCREEN_HEIGHT = 1080;
 const int TARGET_FPS = 60;
 
 // ============================================================================
@@ -40,6 +40,14 @@ struct Vector2f {
     
     Vector2f operator*(float scalar) const {
         return Vector2f(x * scalar, y * scalar);
+    }
+    
+    bool operator==(const Vector2f& v) const {
+        return (x == v.x && y == v.y);
+    }
+    
+    bool operator!=(const Vector2f& v) const {
+        return !(*this == v);
     }
     
     float length() const {
@@ -92,6 +100,7 @@ struct Entity {
     Entity(Type t = UNKNOWN, const Vector2f& p = Vector2f(0, 0));
     void update(float dt, const Player& player);
     void draw() const;
+
 };
 
 struct Game {
@@ -117,3 +126,4 @@ struct Game {
 // ============================================================================
 
 bool aabb_collision(Vector2f p1, float r1, Vector2f p2, float r2);
+void resolve_collision(Vector2f& p1, float r1, Vector2f& p2, float r2);
