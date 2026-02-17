@@ -14,8 +14,8 @@ RAYLIB_DIR = $(PWD)/raylib
 RAYLIB_SRC = $(RAYLIB_DIR)/src
 
 # Fichiers sources et objets
-SRCS = $(wildcard $(SRC_DIR)/*.cpp)
-OBJS = $(SRCS:$(SRC_DIR)/%.cpp=$(BUILD_DIR)/%.o)
+SRCS = $(wildcard $(SRC_DIR)/*.cpp $(SRC_DIR)/**/*.cpp)
+OBJS = $(patsubst $(SRC_DIR)/%.cpp,$(BUILD_DIR)/%.o,$(SRCS))
 DEPS = $(OBJS:.o=.d)
 TARGET = $(BIN_DIR)/game
 
@@ -37,7 +37,7 @@ $(TARGET): $(OBJS)
 	@echo "🎮 Lance: $(TARGET)"
 
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp
-	@mkdir -p $(BUILD_DIR)
+	@mkdir -p $(dir $@)
 	@echo "📝 Compiling $<..."
 	$(CXX) $(CXXFLAGS) -I$(INC_DIR) $(RAYLIB_CFLAGS) -c $< -o $@
 

@@ -20,7 +20,6 @@ int main() {
         game.draw();
         EndDrawing();
     }
-    
     CloseWindow();
     return 0;
 }
