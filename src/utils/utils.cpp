@@ -37,3 +37,10 @@ void	resolve_collision(Vector2f& p1, float r1, Vector2f& p2, float r2) {
 		p2 = p2 - correction;
 	}
 }
+
+int random_int(int min, int max)
+{
+    static std::mt19937 gen(std::random_device{}());
+    std::uniform_int_distribution<int> distrib(min, max);
+    return distrib(gen);
+}

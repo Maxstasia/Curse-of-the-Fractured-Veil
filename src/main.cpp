@@ -20,7 +20,7 @@ int main() {
 		game.update(dt);
 		
 		BeginDrawing();
-		ClearBackground({20, 20, 30, 255});
+		ClearBackground({00, 00, 30, 255});
 		game.draw();
 		EndDrawing();
 	}

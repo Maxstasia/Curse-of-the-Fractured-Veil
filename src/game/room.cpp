@@ -88,6 +88,24 @@ Vector2f Room::get_spawn() const {
 	return _world_offset + Vector2f(_width * _tile_size * 0.5f, _height * _tile_size * 0.5f);
 }
 
+Vector2f Room::get_door_position(Tile door_type) const {
+	for (int y = 0; y < _height; ++y) {
+		for (int x = 0; x < _width; ++x) {
+			if (get_tile(x, y) == door_type) {
+				float px = _world_offset._x + (x + 0.5f) * _tile_size;
+				float py = _world_offset._y + (y + 0.5f) * _tile_size;
+				// Décaler légèrement vers l'intérieur pour éviter de re-trigger la transition
+				if (door_type == DOOR_N) py += _tile_size;
+				else if (door_type == DOOR_S) py -= _tile_size;
+				else if (door_type == DOOR_E) px -= _tile_size;
+				else if (door_type == DOOR_O) px += _tile_size;
+				return Vector2f(px, py);
+			}
+		}
+	}
+	return Vector2f(-1, -1);
+}
+
 bool Room::is_walkable(const Vector2f& pos, float radius) const {
 	Vector2f local_pos = pos - _world_offset;
 	int left = (int)std::floor((local_pos._x - radius) / _tile_size);
@@ -128,82 +146,140 @@ void Room::draw() const {
 // ============================================================================
 
 Dungeon::Dungeon() 
-	: _current_room(0), _camera_target(0, 0), _camera_pos(0, 0), 
+	: _rooms_visited(0), _tile_size(64), _camera_target(0, 0), _camera_pos(0, 0), 
 	  _camera_transition_speed(500.0f), _transitioning(false) {}
 
 void Dungeon::init() {
-	_rooms.clear();
-	_current_room = 0;
+	_rooms_visited = 0;
 	_transitioning = false;
+	_used_files.clear();
+	_easy_files.clear();
+	_medium_files.clear();
+	_hard_files.clear();
+	_boss_files.clear();
 }
 
-int Dungeon::load_rooms(int count, int tile_size) {
-	_rooms.clear();
+int Dungeon::scan_room_files(int tile_size) {
+	_tile_size = tile_size;
+	_easy_files.clear();
+	_medium_files.clear();
+	_hard_files.clear();
+	_boss_files.clear();
+	_used_files.clear();
 
-	std::string rooms_dir = ROOM_PATH;
-	std::vector<std::string> room_files;
+	std::string base_path = ROOM_PATH;
+	std::string categories[] = {"easy", "medium", "hard", "boss"};
+	std::vector<std::string>* file_lists[] = {&_easy_files, &_medium_files, &_hard_files, &_boss_files};
 
-	// Lire le répertoire des salles
-	DIR* dir = opendir(rooms_dir.c_str());
-	if (dir != nullptr) {
+	for (int i = 0; i < categories->size(); ++i) {
+		std::string dir_path = base_path + "/" + categories[i];
+		DIR* dir = opendir(dir_path.c_str());
+		if (!dir) {
+			printf("WARNING: Could not open room directory: %s\n", dir_path.c_str());
+			continue;
+		}
 		struct dirent* entry;
 		while ((entry = readdir(dir)) != nullptr) {
 			std::string filename = entry->d_name;
-			if (filename.length() > 4 && filename.substr(filename.length() - 5) == ".room") {
-				room_files.push_back(rooms_dir + "/" + filename);
-				printf("DEBUG : Found room file: %s\n", filename.c_str());
-				printf("DEBUG : room_files : %s\n", room_files.back().c_str());
+			if (filename.length() > 5 && filename.substr(filename.length() - 5) == ".room") {
+				file_lists[i]->push_back(dir_path + "/" + filename);
+				printf("DEBUG: Found %s room: %s\n", categories[i].c_str(), filename.c_str());
 			}
 		}
 		closedir(dir);
 	}
-	else {
-		printf("ERROR : Failed to open rooms directory: %s\n", rooms_dir.c_str());
+
+	int total = _easy_files.size() + _medium_files.size() + _hard_files.size() + _boss_files.size();
+	if (total == 0) {
+		printf("ERROR: No room files found in %s!\n", base_path.c_str());
 		return -1;
 	}
-
-	if (room_files.empty()) {
-		printf("ERROR : No room files found in directory: %s\n", rooms_dir.c_str());
-		return -1;
-	}
-
-	// Charger les salles et les placer
-	for (int i = 0; i < count && i < (int)room_files.size(); ++i) {
-		Room room;
-		if (room.load_from_file(room_files[i], tile_size)) {
-			room._room_id = i;
-			// Calculer l'offset pour centrer la salle sur l'écran
-			float room_width = room._width * tile_size;
-			float room_height = room._height * tile_size;
-			float offset_x = (SCREEN_WIDTH - room_width) * 0.5f;
-			float offset_y = (SCREEN_HEIGHT - room_height) * 0.5f;
-			room._world_offset = Vector2f(offset_x, offset_y);
-			_rooms.push_back(room);
-		}
-		else
-			return -1;
-	}
+	printf("DEBUG: Found %d total room files (easy:%d, medium:%d, hard:%d, boss:%d)\n",
+		total, (int)_easy_files.size(), (int)_medium_files.size(), 
+		(int)_hard_files.size(), (int)_boss_files.size());
 	return 0;
 }
 
-void Dungeon::connect_rooms() {
-	// Créer des connexions entre les salles basées sur leurs portes
-	for (size_t i = 0; i < _rooms.size(); ++i) {
-		// Trouver les portes disponibles
-		for (int y = 0; y < _rooms[i]._height; ++y) {
-			for (int x = 0; x < _rooms[i]._width; ++x) {
-				Room::Tile t = _rooms[i].get_tile(x, y);
-				if (t != Room::DOOR_N && t != Room::DOOR_S && t != Room::DOOR_E && t != Room::DOOR_O)
-					continue;
+std::string Dungeon::pick_next_room_file() {
+	// Filtrer les fichiers déjà utilisés pour chaque catégorie
+	std::vector<std::string> avail[4];
+	const std::vector<std::string>* pools[4] = {&_easy_files, &_medium_files, &_hard_files, &_boss_files};
 
-				// Connecter à une autre salle aléatoire
-				int other_idx = rdm(0);
-				printf("DEBUG : Connecting room %d to room %d\n", (int)i, other_idx);
-				if (other_idx >= (int)i)
-					other_idx++;
-			}
+	for (int cat = 0; cat < 4; ++cat) {
+		for (const auto& f : *pools[cat]) {
+			if (std::find(_used_files.begin(), _used_files.end(), f) == _used_files.end())
+				avail[cat].push_back(f);
 		}
 	}
+
+	// Probabilités pondérées selon la progression du joueur
+	// Plus le joueur avance, plus les salles hard/boss deviennent probables
+	float weights[4];
+	weights[0] = avail[0].empty() ? 0.0f : std::max(1.0f, 50.0f - _rooms_visited * 5.0f);	// easy
+	weights[1] = avail[1].empty() ? 0.0f : std::max(1.0f, 30.0f - _rooms_visited * 2.0f);	// medium
+	weights[2] = avail[2].empty() ? 0.0f : 15.0f + _rooms_visited * 3.0f;					// hard
+	weights[3] = avail[3].empty() ? 0.0f : 5.0f + _rooms_visited * 4.0f;					// boss
+
+	float total = weights[0] + weights[1] + weights[2] + weights[3];
+
+	if (total <= 0.0f) {
+		// Toutes les salles ont été visitées, on reset la liste
+		if (_used_files.empty()) {
+			printf("ERROR: No room files available at all!\n");
+			return "";
+		}
+		printf("DEBUG: All rooms visited, resetting used files list\n");
+		_used_files.clear();
+		return pick_next_room_file();
+	}
+
+	printf("DEBUG: Room weights [easy:%.0f medium:%.0f hard:%.0f boss:%.0f] (visited:%d)\n",
+		weights[0], weights[1], weights[2], weights[3], _rooms_visited);
+
+	// Tirage aléatoire pondéré
+	float roll = (float)random_int(0, 10000) / 10000.0f * total;
+	int chosen_cat = 3;
+	float cumulative = 0.0f;
+	for (int i = 0; i < 4; ++i) {
+		cumulative += weights[i];
+		if (roll < cumulative) {
+			chosen_cat = i;
+			break;
+		}
+	}
+
+	const char* cat_names[] = {"easy", "medium", "hard", "boss"};
+	printf("DEBUG: Picked category: %s\n", cat_names[chosen_cat]);
+
+	// Choisir un fichier au hasard dans la catégorie sélectionnée
+	int idx = random_int(0, (int)avail[chosen_cat].size() - 1);
+	return avail[chosen_cat][idx];
+}
+
+bool Dungeon::load_next_room() {
+	std::string file = pick_next_room_file();
+	if (file.empty())
+		return false;
+
+	Room new_room;
+	if (!new_room.load_from_file(file, _tile_size))
+		return false;
+
+	// Centrer la salle sur l'écran
+	float room_width = new_room._width * _tile_size;
+	float room_height = new_room._height * _tile_size;
+	new_room._world_offset = Vector2f(
+		(SCREEN_WIDTH - room_width) * 0.5f,
+		(SCREEN_HEIGHT - room_height) * 0.5f
+	);
+	new_room._room_id = _rooms_visited;
+
+	_used_files.push_back(file);
+	_active_room = new_room;
+	_rooms_visited++;
+
+	printf("DEBUG: Loaded room %s (total visited: %d)\n", file.c_str(), _rooms_visited);
+	return true;
 }
 
 void Dungeon::update(float dt) {
@@ -219,28 +295,14 @@ void Dungeon::update(float dt) {
 	}
 }
 
-void Dungeon::change_room(int new_room_id, const Vector2f& player_spawn) {
-	if (new_room_id < 0 || new_room_id >= (int)_rooms.size())
-		return;
-	(void)player_spawn;
-	_current_room = new_room_id;
-	_camera_target = Vector2f(_rooms[new_room_id]._width * _rooms[new_room_id]._tile_size * 0.5f,
-							   _rooms[new_room_id]._height * _rooms[new_room_id]._tile_size * 0.5f);
-	_transitioning = true;
-}
-
 Room& Dungeon::current_room() {
-	if (_current_room < 0 || _current_room >= (int)_rooms.size())
-		_current_room = 0;
-	return _rooms[_current_room];
+	return _active_room;
 }
 
 const Room& Dungeon::current_room() const {
-	if (_current_room < 0 || _current_room >= (int)_rooms.size())
-		return _rooms[0];
-	return _rooms[_current_room];
+	return _active_room;
 }
 
 void Dungeon::draw() const {
-	_rooms[_current_room].draw();
+	_active_room.draw();
 }

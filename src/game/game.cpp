@@ -22,23 +22,13 @@ int		Game::init() {
 	float scale_factor = (float)SCREEN_WIDTH / REFERENCE_WIDTH;
 	int tile_size = (int)(REFERENCE_TILE_SIZE * scale_factor);
 	
-	if (_dungeon.load_rooms(NUMBERS_OF_ROOMS, tile_size) != 0)
+	if (_dungeon.scan_room_files(tile_size) != 0)
 		return -1;
 
-	/* if (SCREEN_WIDTH == 2560 && SCREEN_HEIGHT == 1440)
-		int tmp = _dungeon.load_rooms(NUMBERS_OF_ROOMS, 81);
-	else if (SCREEN_WIDTH == 1920 && SCREEN_HEIGHT == 1080)
-		int tmp = _dungeon.load_rooms(NUMBERS_OF_ROOMS, 64);
-	else if (SCREEN_WIDTH == 1280 && SCREEN_HEIGHT == 720)
-		int tmp = _dungeon.load_rooms(NUMBERS_OF_ROOMS, 43);
-	else {
-		printf("Unsupported screen resolution: %dx%d\n", SCREEN_WIDTH, SCREEN_HEIGHT);
+	// Charger la première salle
+	if (!_dungeon.load_next_room())
 		return -1;
-	}
-	if (tmp != 0)
-		return -1; */
 
-	_dungeon.connect_rooms();
 	_player.reset();
 	_player._pos = _dungeon.current_room().get_spawn();
 	_enemies.clear();
@@ -65,12 +55,23 @@ void	Game::update(float dt) {
 		Room::Tile tile = _dungeon.current_room().get_tile(tx, ty);
 		
 		if (tile == Room::DOOR_N || tile == Room::DOOR_S || tile == Room::DOOR_E || tile == Room::DOOR_O) {
-			// Trouver la prochaine salle
-			int next_room = (GetRandomValue(0, _dungeon._rooms.size() - 2));
-			if (next_room >= _dungeon._current_room)
-				next_room++;
-			_dungeon.change_room(next_room, _dungeon._rooms[next_room].get_spawn());
-			_player._pos = _dungeon.current_room().get_spawn();
+			// Charger une nouvelle salle aléatoire (pondérée par la progression)
+			Room::Tile exit_dir = tile;
+			if (_dungeon.load_next_room()) {
+				// Spawn à la porte opposée de la direction de sortie
+				Room::Tile opposite;
+				if (exit_dir == Room::DOOR_N) opposite = Room::DOOR_S;
+				else if (exit_dir == Room::DOOR_S) opposite = Room::DOOR_N;
+				else if (exit_dir == Room::DOOR_E) opposite = Room::DOOR_O;
+				else opposite = Room::DOOR_E;
+
+				Vector2f spawn = _dungeon.current_room().get_door_position(opposite);
+				if (spawn._x >= 0 && spawn._y >= 0)
+					_player._pos = spawn;
+				else
+					_player._pos = _dungeon.current_room().get_spawn();
+				_enemies.clear();
+			}
 		} else {
 			// Collision avec le mur, annuler le mouvement
 			_player._pos = prev_pos;
@@ -127,7 +128,7 @@ void	Game::update(float dt) {
 		change_state(GameState::GAME_OVER);
 	
 	// Spawn ennemis au fil du temps dans la salle actuelle
-	static float spawn_timer = 0;
+	/* static float spawn_timer = 0;
 	spawn_timer += dt;
 	if (spawn_timer > 3.0f && _enemies.size() < 10) {
 		Vector2f spawn_pos = _dungeon.current_room().get_spawn();
@@ -140,7 +141,7 @@ void	Game::update(float dt) {
 			spawn_enemy(Entity::PRIEST, spawn_pos);
 		}
 		spawn_timer = 0;
-	}
+	} */
 }
 
 void	Game::draw() const {
@@ -153,7 +154,7 @@ void	Game::draw() const {
 		for (const auto& enemy : _enemies) {
 			enemy.draw();
 		}
-		DrawText(TextFormat("Room: %d | Wave: %d | Time: %.1f", _dungeon._current_room, _wave, _time_elapsed), 10, 60, 20, WHITE);
+		DrawText(TextFormat("Room: %d | Wave: %d | Time: %.1f", _dungeon._rooms_visited, _wave, _time_elapsed), 10, 60, 20, WHITE);
 	} else if (_state == GameState::GAME_OVER) {
 		DrawText("GAME OVER", SCREEN_WIDTH/2 - 150, SCREEN_HEIGHT/2 - 50, 40, RED);
 		DrawText(TextFormat("Score: %d", _score), SCREEN_WIDTH/2 - 100, SCREEN_HEIGHT/2 + 20, 20, WHITE);
@@ -162,7 +163,7 @@ void	Game::draw() const {
 }
 
 void	Game::handle_input() {
-	if (IsKeyPressed(KEY_SPACE)) {
+	if (IsKeyPressed(KEY_SPACE) || IsKeyPressed(KEY_LEFT_SHIFT)) {
 		if (_state == GameState::MENU) {
 			change_state(GameState::RUNNING);
 		} else if (_state == GameState::RUNNING) {

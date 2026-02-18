@@ -8,6 +8,7 @@
 #include <string>
 #include <fstream>
 #include <sstream>
+#include <random>
 
 // ============================================================================
 // CONSTANTS & ENUMS
@@ -23,13 +24,14 @@ enum class GameState {
 const int REFERENCE_WIDTH = 1920;
 const int REFERENCE_HEIGHT = 1080;
 const int REFERENCE_TILE_SIZE = 64;
-const int NUMBERS_OF_ROOMS = 5;
 // const int SCREEN_WIDTH = 2560;
 // const int SCREEN_HEIGHT = 1440;
-const int SCREEN_WIDTH = 1920;
-const int SCREEN_HEIGHT = 1080;
+// const int SCREEN_WIDTH = 1920;
+// const int SCREEN_HEIGHT = 1080;
 // const int SCREEN_WIDTH = 1280;
 // const int SCREEN_HEIGHT = 720;
+const int SCREEN_WIDTH = 1920;
+const int SCREEN_HEIGHT = 1020;
 const int TARGET_FPS = 60;
 
 const std::string ROOM_PATH = "rooms";
@@ -154,25 +156,33 @@ struct Room {
 	void		set_tile(int x, int y, Tile t);
 	bool		in_bounds(int x, int y) const;
 	Vector2f	get_spawn() const;
+	Vector2f	get_door_position(Tile door_type) const;
 	bool		is_walkable(const Vector2f& pos, float radius) const;
 	void		draw() const;
 };
 
 struct Dungeon {
-	std::vector<Room>		_rooms;
-	std::vector<Vector2f>	_connections;
-	int						_current_room;
-	Vector2f				_camera_target;
-	Vector2f				_camera_pos;
-	float					_camera_transition_speed;
-	bool					_transitioning;
+	Room						_active_room;
+	int							_rooms_visited;
+	int							_tile_size;
+	Vector2f					_camera_target;
+	Vector2f					_camera_pos;
+	float						_camera_transition_speed;
+	bool						_transitioning;
+
+	// Pools de fichiers de salles par difficulté
+	std::vector<std::string>	_easy_files;
+	std::vector<std::string>	_medium_files;
+	std::vector<std::string>	_hard_files;
+	std::vector<std::string>	_boss_files;
+	std::vector<std::string>	_used_files;
 
 	Dungeon();
 	void		init();
-	int			load_rooms(int count, int tile_size);
-	void		connect_rooms();
+	int			scan_room_files(int tile_size);
+	std::string	pick_next_room_file();
+	bool		load_next_room();
 	void		update(float dt);
-	void		change_room(int new_room_id, const Vector2f& player_spawn);
 	Room&		current_room();
 	const Room&	current_room() const;
 	void		draw() const;
@@ -203,3 +213,4 @@ struct Game {
 
 bool			aabb_collision(Vector2f p1, float r1, Vector2f p2, float r2);
 void			resolve_collision(Vector2f& p1, float r1, Vector2f& p2, float r2);
+int				random_int(int min, int max);
