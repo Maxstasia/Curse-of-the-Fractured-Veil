@@ -14,7 +14,7 @@ Room::Room(int w, int h, int tile_size)
 bool Room::load_from_file(const std::string& filename, int tile_size) {
 	std::ifstream file(filename);
 	if (!file.is_open()) {
-		printf("Failed to load room file: %s\n", filename.c_str());
+		printf("ERROR : Failed to load room file: %s\n", filename.c_str());
 		return false;
 	}
 
@@ -22,7 +22,7 @@ bool Room::load_from_file(const std::string& filename, int tile_size) {
 	std::string line;
 	while (std::getline(file, line)) {
 		if (line.empty() || line[0] == ' ') {
-			printf("Failed to load room file: %s\n", filename.c_str());
+			printf("ERROR : Failed to load room file: %s\n", filename.c_str());
 			return false;
 		}
 		lines.push_back(line);
@@ -30,7 +30,7 @@ bool Room::load_from_file(const std::string& filename, int tile_size) {
 	file.close();
 
 	if (lines.empty()) {
-		printf("Failed to load room file: %s (empty file)\n", filename.c_str());
+		printf("ERROR : Failed to load room file: %s (empty file)\n", filename.c_str());
 		return false;
 	}
 
@@ -137,10 +137,10 @@ void Dungeon::init() {
 	_transitioning = false;
 }
 
-void Dungeon::load_rooms(int count, int tile_size) {
+int Dungeon::load_rooms(int count, int tile_size) {
 	_rooms.clear();
 
-	std::string rooms_dir = "rooms";
+	std::string rooms_dir = ROOM_PATH;
 	std::vector<std::string> room_files;
 
 	// Lire le répertoire des salles
@@ -158,22 +158,13 @@ void Dungeon::load_rooms(int count, int tile_size) {
 		closedir(dir);
 	}
 	else {
-		printf("Failed to open rooms directory: %s\n", rooms_dir.c_str());
+		printf("ERROR : Failed to open rooms directory: %s\n", rooms_dir.c_str());
+		return -1;
 	}
 
 	if (room_files.empty()) {
-		printf("No room files found in directory: %s\n", rooms_dir.c_str());
-		// Créer une salle vide si pas de fichier
-		Room default_room(10, 8, tile_size);
-		for (int y = 1; y < 7; ++y) {
-			for (int x = 1; x < 9; ++x) {
-				default_room.set_tile(x, y, Room::FLOOR);
-			}
-		}
-		default_room._room_id = 0;
-		default_room._world_offset = Vector2f(0, 0);
-		_rooms.push_back(default_room);
-		return;
+		printf("ERROR : No room files found in directory: %s\n", rooms_dir.c_str());
+		return -1;
 	}
 
 	// Charger les salles et les placer
@@ -181,12 +172,18 @@ void Dungeon::load_rooms(int count, int tile_size) {
 		Room room;
 		if (room.load_from_file(room_files[i], tile_size)) {
 			room._room_id = i;
-			room._world_offset = Vector2f(0, 0);
+			// Calculer l'offset pour centrer la salle sur l'écran
+			float room_width = room._width * tile_size;
+			float room_height = room._height * tile_size;
+			float offset_x = (SCREEN_WIDTH - room_width) * 0.5f;
+			float offset_y = (SCREEN_HEIGHT - room_height) * 0.5f;
+			room._world_offset = Vector2f(offset_x, offset_y);
 			_rooms.push_back(room);
 		}
 		else
-			return ;
+			return -1;
 	}
+	return 0;
 }
 
 void Dungeon::connect_rooms() {
@@ -200,7 +197,8 @@ void Dungeon::connect_rooms() {
 					continue;
 
 				// Connecter à une autre salle aléatoire
-				int other_idx = GetRandomValue(0, _rooms.size() - 2);
+				int other_idx = rdm(0);
+				printf("DEBUG : Connecting room %d to room %d\n", (int)i, other_idx);
 				if (other_idx >= (int)i)
 					other_idx++;
 			}

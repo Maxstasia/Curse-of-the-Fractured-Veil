@@ -20,9 +20,19 @@ enum class GameState {
 	PAUSE
 };
 
+const int REFERENCE_WIDTH = 1920;
+const int REFERENCE_HEIGHT = 1080;
+const int REFERENCE_TILE_SIZE = 64;
+const int NUMBERS_OF_ROOMS = 5;
+// const int SCREEN_WIDTH = 2560;
+// const int SCREEN_HEIGHT = 1440;
 const int SCREEN_WIDTH = 1920;
 const int SCREEN_HEIGHT = 1080;
+// const int SCREEN_WIDTH = 1280;
+// const int SCREEN_HEIGHT = 720;
 const int TARGET_FPS = 60;
+
+const std::string ROOM_PATH = "rooms";
 
 // ============================================================================
 // FORWARD DECLARATIONS
@@ -46,31 +56,31 @@ struct Vector2f {
 	Vector2f() : _x(0), _y(0) {}
 	Vector2f(float x, float y) : _x(x), _y(y) {}
 	
-	Vector2f operator+(const Vector2f& v) const {
+	Vector2f	operator+(const Vector2f& v) const {
 		return Vector2f(_x + v._x, _y + v._y);
 	}
 	
-	Vector2f operator-(const Vector2f& v) const {
+	Vector2f	operator-(const Vector2f& v) const {
 		return Vector2f(_x - v._x, _y - v._y);
 	}
 	
-	Vector2f operator*(float scalar) const {
+	Vector2f	operator*(float scalar) const {
 		return Vector2f(_x * scalar, _y * scalar);
 	}
 	
-	bool operator==(const Vector2f& v) const {
+	bool		operator==(const Vector2f& v) const {
 		return (_x == v._x && _y == v._y);
 	}
 	
-	bool operator!=(const Vector2f& v) const {
+	bool		operator!=(const Vector2f& v) const {
 		return !(*this == v);
 	}
 
-	float length() const {
+	float		length() const {
 		return std::sqrt(_x * _x + _y * _y);
 	}
 
-	Vector2f normalized() const {
+	Vector2f	normalized() const {
 		float len = length();
 		if (len == 0) return Vector2f(0, 0);
 		return Vector2f(_x / len, _y / len);
@@ -91,9 +101,9 @@ struct Player {
 	float					_dash_speed;	// Vitesse du dash
 		
 	Player();
-	void reset();
-	void update(float dt);
-	void draw() const;
+	void		reset();
+	void		update(float dt);
+	void		draw() const;
 };
 
 struct Entity {
@@ -115,8 +125,8 @@ struct Entity {
 	float					_dammage;
 		
 	Entity(Type t = UNKNOWN, const Vector2f& p = Vector2f(0, 0));
-	void update(float dt, const Player& player, const Room& room);
-	void draw() const;
+	void		update(float dt, const Player& player, const Room& room);
+	void		draw() const;
 
 };
 
@@ -139,13 +149,13 @@ struct Room {
 
 	Room();
 	Room(int w, int h, int tile_size);
-	bool load_from_file(const std::string& filename, int tile_size);
-	Tile get_tile(int x, int y) const;
-	void set_tile(int x, int y, Tile t);
-	bool in_bounds(int x, int y) const;
-	Vector2f get_spawn() const;
-	bool is_walkable(const Vector2f& pos, float radius) const;
-	void draw() const;
+	bool		load_from_file(const std::string& filename, int tile_size);
+	Tile		get_tile(int x, int y) const;
+	void		set_tile(int x, int y, Tile t);
+	bool		in_bounds(int x, int y) const;
+	Vector2f	get_spawn() const;
+	bool		is_walkable(const Vector2f& pos, float radius) const;
+	void		draw() const;
 };
 
 struct Dungeon {
@@ -158,14 +168,14 @@ struct Dungeon {
 	bool					_transitioning;
 
 	Dungeon();
-	void init();
-	void load_rooms(int count, int tile_size);
-	void connect_rooms();
-	void update(float dt);
-	void change_room(int new_room_id, const Vector2f& player_spawn);
-	Room& current_room();
-	const Room& current_room() const;
-	void draw() const;
+	void		init();
+	int			load_rooms(int count, int tile_size);
+	void		connect_rooms();
+	void		update(float dt);
+	void		change_room(int new_room_id, const Vector2f& player_spawn);
+	Room&		current_room();
+	const Room&	current_room() const;
+	void		draw() const;
 };
 
 struct Game {
@@ -179,17 +189,17 @@ struct Game {
 	int						_wave;
 		
 	Game();
-	void init();
-	void update(float dt);
-	void draw() const;
-	void handle_input();
-	void change_state(GameState new_state);
-	void spawn_enemy(Entity::Type type, const Vector2f& pos);
+	int			init();
+	void		update(float dt);
+	void		draw() const;
+	void		handle_input();
+	void		change_state(GameState new_state);
+	void		spawn_enemy(Entity::Type type, const Vector2f& pos);
 };
 
 // ============================================================================
 // UTILITY FUNCTIONS
 // ============================================================================
 
-bool aabb_collision(Vector2f p1, float r1, Vector2f p2, float r2);
-void resolve_collision(Vector2f& p1, float r1, Vector2f& p2, float r2);
+bool			aabb_collision(Vector2f p1, float r1, Vector2f p2, float r2);
+void			resolve_collision(Vector2f& p1, float r1, Vector2f& p2, float r2);

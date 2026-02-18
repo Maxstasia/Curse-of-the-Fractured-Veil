@@ -11,24 +11,38 @@ Game::Game()
 		_score(0),
 		_wave(0) {}
 
-void	Game::init() {
+int		Game::init() {
 	_state = GameState::MENU;
 	_next_state = GameState::MENU;
 	_time_elapsed = 0;
 	_score = 0;
 	_wave = 0;
 	_dungeon.init();
-	if (SCREEN_WIDTH == 1920 && SCREEN_HEIGHT == 1080)
-		_dungeon.load_rooms(5, 64);
+	// Calculer la taille des tuiles proportionnellement à la résolution
+	float scale_factor = (float)SCREEN_WIDTH / REFERENCE_WIDTH;
+	int tile_size = (int)(REFERENCE_TILE_SIZE * scale_factor);
+	
+	if (_dungeon.load_rooms(NUMBERS_OF_ROOMS, tile_size) != 0)
+		return -1;
+
+	/* if (SCREEN_WIDTH == 2560 && SCREEN_HEIGHT == 1440)
+		int tmp = _dungeon.load_rooms(NUMBERS_OF_ROOMS, 81);
+	else if (SCREEN_WIDTH == 1920 && SCREEN_HEIGHT == 1080)
+		int tmp = _dungeon.load_rooms(NUMBERS_OF_ROOMS, 64);
 	else if (SCREEN_WIDTH == 1280 && SCREEN_HEIGHT == 720)
-		_dungeon.load_rooms(3, 32);
-	else
-		return ;
-		
+		int tmp = _dungeon.load_rooms(NUMBERS_OF_ROOMS, 43);
+	else {
+		printf("Unsupported screen resolution: %dx%d\n", SCREEN_WIDTH, SCREEN_HEIGHT);
+		return -1;
+	}
+	if (tmp != 0)
+		return -1; */
+
 	_dungeon.connect_rooms();
 	_player.reset();
 	_player._pos = _dungeon.current_room().get_spawn();
 	_enemies.clear();
+	return 0;
 }
 
 void	Game::update(float dt) {
@@ -71,8 +85,18 @@ void	Game::update(float dt) {
 			// Check collision avec le joueur
 			if (aabb_collision(_player._pos, _player._radius, enemy._pos, enemy._radius)) {
 				_player._hp -= enemy._dammage * dt;
+				// Sauvegarder la position du joueur avant résolution
+				Vector2f player_pos_before = _player._pos;
 				// Résoudre la collision (repousser le monstre et le joueur)
 				resolve_collision(_player._pos, _player._radius, enemy._pos, enemy._radius);
+				// Vérifier que le joueur n'est pas dans un mur après la résolution
+				if (!_dungeon.current_room().is_walkable(_player._pos, _player._radius)) {
+					// Si le joueur est dans un mur, le remettre à sa position précédente
+					_player._pos = player_pos_before;
+					// Et pousser seulement l'ennemi dans la direction opposée
+					Vector2f push_dir = (enemy._pos - _player._pos).normalized();
+					enemy._pos = _player._pos + push_dir * (_player._radius + enemy._radius);
+				}
 			}
 		}
 	}
@@ -103,7 +127,7 @@ void	Game::update(float dt) {
 		change_state(GameState::GAME_OVER);
 	
 	// Spawn ennemis au fil du temps dans la salle actuelle
-	/* static float spawn_timer = 0;
+	static float spawn_timer = 0;
 	spawn_timer += dt;
 	if (spawn_timer > 3.0f && _enemies.size() < 10) {
 		Vector2f spawn_pos = _dungeon.current_room().get_spawn();
@@ -116,7 +140,7 @@ void	Game::update(float dt) {
 			spawn_enemy(Entity::PRIEST, spawn_pos);
 		}
 		spawn_timer = 0;
-	} */
+	}
 }
 
 void	Game::draw() const {
