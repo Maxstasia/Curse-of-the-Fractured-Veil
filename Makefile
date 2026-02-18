@@ -17,7 +17,7 @@ RAYLIB_SRC = $(RAYLIB_DIR)/src
 SRCS = $(wildcard $(SRC_DIR)/*.cpp $(SRC_DIR)/**/*.cpp)
 OBJS = $(patsubst $(SRC_DIR)/%.cpp,$(BUILD_DIR)/%.o,$(SRCS))
 DEPS = $(OBJS:.o=.d)
-TARGET = $(BIN_DIR)/game
+TARGET = $(BIN_DIR)/curse-of-the-fractured-veil
 
 # Inclure les fichiers de dépendances
 -include $(DEPS)

@@ -6,7 +6,7 @@ raylib/
 *.so
 
 # Binaires
-game
+curse-of-the-fractured-veil
 *.exe
 
 # IDE
