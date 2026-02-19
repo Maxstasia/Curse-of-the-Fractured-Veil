@@ -32,6 +32,7 @@ int		Game::init() {
 	_player.reset();
 	_player._pos = _dungeon.current_room().get_spawn();
 	_enemies.clear();
+	_projectiles.clear();
 	return 0;
 }
 
@@ -71,6 +72,7 @@ void	Game::update(float dt) {
 				else
 					_player._pos = _dungeon.current_room().get_spawn();
 				_enemies.clear();
+				_projectiles.clear();
 			}
 		} else {
 			// Collision avec le mur, annuler le mouvement
@@ -81,7 +83,7 @@ void	Game::update(float dt) {
 	// Update ennemis
 	for (auto& enemy : _enemies) {
 		if (enemy._alive) {
-			enemy.update(dt, _player, _dungeon.current_room());
+			enemy.update(dt, _player, _dungeon.current_room(), _projectiles);
 			
 			// Check collision avec le joueur
 			if (aabb_collision(_player._pos, _player._radius, enemy._pos, enemy._radius)) {
@@ -123,6 +125,40 @@ void	Game::update(float dt) {
 	// Nettoyer les ennemis morts
 	_enemies.erase(std::remove_if(_enemies.begin(), _enemies.end(), [](const Entity& e) { return !e._alive; }), _enemies.end());
 	
+	// Update projectiles
+	for (auto& proj : _projectiles) {
+		proj.update(dt, _dungeon.current_room());
+		
+		if (!proj._alive) continue;
+		
+		if (proj._from_player) {
+			// Projectile du joueur -> touche les ennemis
+			for (auto& enemy : _enemies) {
+				if (!enemy._alive) continue;
+				if (aabb_collision(proj._pos, proj._radius, enemy._pos, enemy._radius)) {
+					enemy._hp -= proj._damage;
+					if (enemy._hp <= 0)
+						enemy._alive = false;
+					proj._alive = false;
+					break;
+				}
+			}
+		} else {
+			// Projectile ennemi -> touche le joueur
+			if (aabb_collision(proj._pos, proj._radius, _player._pos, _player._radius)) {
+				_player._hp -= proj._damage;
+				proj._alive = false;
+			}
+		}
+	}
+	
+	// Nettoyer les projectiles morts
+	_projectiles.erase(std::remove_if(_projectiles.begin(), _projectiles.end(), 
+		[](const Projectile& p) { return !p._alive; }), _projectiles.end());
+	
+	// Re-nettoyer les ennemis tués par projectiles
+	_enemies.erase(std::remove_if(_enemies.begin(), _enemies.end(), [](const Entity& e) { return !e._alive; }), _enemies.end());
+	
 	// Check si le joueur est mort
 	if (_player._hp <= 0)
 		change_state(GameState::GAME_OVER);
@@ -154,6 +190,9 @@ void	Game::draw() const {
 		for (const auto& enemy : _enemies) {
 			enemy.draw();
 		}
+		for (const auto& proj : _projectiles) {
+			proj.draw();
+		}
 		DrawText(TextFormat("Room: %d | Wave: %d | Time: %.1f", _dungeon._rooms_visited, _wave, _time_elapsed), 10, 60, 20, WHITE);
 	} else if (_state == GameState::GAME_OVER) {
 		DrawText("GAME OVER", SCREEN_WIDTH/2 - 150, SCREEN_HEIGHT/2 - 50, 40, RED);
@@ -175,6 +214,20 @@ void	Game::handle_input() {
 				_player._vel = _player._vel.normalized() * _player._dash_speed;
 			}
 		}
+	}
+	
+	if (_state == GameState::RUNNING) {
+		// Changement d'arme : touches 1, 2 ou TAB
+		if (IsKeyPressed(KEY_ONE) || IsKeyPressed(KEY_KP_1))
+			_player._active_weapon = 0;
+		if (IsKeyPressed(KEY_TWO) || IsKeyPressed(KEY_KP_2))
+			_player._active_weapon = 1;
+		if (IsKeyPressed(KEY_TAB))
+			_player.switch_weapon();
+		
+		// Attaque : clic gauche de la souris
+		if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
+			_player.attack(_enemies, _projectiles);
 	}
 	
 	if (IsKeyPressed(KEY_R) && _state == GameState::GAME_OVER) {

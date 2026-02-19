@@ -41,6 +41,8 @@ const std::string ROOM_PATH = "rooms";
 // ============================================================================
 
 struct Vector2f;
+struct Weapon;
+struct Projectile;
 struct Player;
 struct Entity;
 struct Room;
@@ -89,23 +91,60 @@ struct Vector2f {
 	}
 };
 
+struct Weapon {
+	enum Type {
+		SWORD,
+		BOW,
+		STAFF
+	};
+
+	Type	_type;
+	float	_damage;
+	float	_range;
+	float	_cooldown;
+
+	Weapon(Type t = SWORD);
+};
+
+struct Projectile {
+	Vector2f	_pos;
+	Vector2f	_vel;
+	float		_damage;
+	float		_radius;
+	float		_lifetime;
+	bool		_alive;
+	bool		_from_player;
+	
+	Projectile(const Vector2f& pos, const Vector2f& vel, float damage, float radius, bool from_player, float lifetime = 3.0f);
+	void		update(float dt, const Room& room);
+	void		draw() const;
+};
+
 struct Player {
-	Vector2f				_pos;			// Position
-	Vector2f				_vel;			// Vélocité
-	Vector2f				_acc;			// Accélération
-	float					_speed;			// Vitesse max
-	float					_radius;		// Rayon (collision)
-	float					_hp;			// Points de vie
-	float					_max_hp;		// Points de vie max
-	float					_dash_cooldown;	// Cooldown du dash
-	bool					_is_dashing;	// En train de dash ?
-	float					_dash_duration;	// Durée du dash en cours
-	float					_dash_speed;	// Vitesse du dash
+	Weapon					_weapons[2];		// 2 emplacements d'armes
+	int						_active_weapon;		// Index arme active (0 ou 1)
+	float					_attack_timer;		// Cooldown avant prochaine attaque
+	Vector2f				_facing;			// Direction visée (vers la souris)
+	bool					_is_attacking;		// Animation d'attaque en cours
+	float					_attack_anim_timer;	// Timer animation attaque
+	Vector2f				_pos;
+	Vector2f				_vel;
+	Vector2f				_acc;
+	float					_speed;
+	float					_radius;
+	float					_hp;
+	float					_max_hp;
+	float					_dash_cooldown;
+	bool					_is_dashing;
+	float					_dash_duration;
+	float					_dash_speed;
 		
 	Player();
 	void		reset();
 	void		update(float dt);
 	void		draw() const;
+	void		attack(std::vector<Entity>& enemies, std::vector<Projectile>& projectiles);
+	void		switch_weapon();
 };
 
 struct Entity {
@@ -125,11 +164,12 @@ struct Entity {
 	bool					_alive;
 	float					_speed;
 	float					_dammage;
+	float					_shoot_timer;		// Timer tir projectile (Priest)
+	float					_shoot_cooldown;	// Intervalle entre tirs
 		
 	Entity(Type t = UNKNOWN, const Vector2f& p = Vector2f(0, 0));
-	void		update(float dt, const Player& player, const Room& room);
+	void		update(float dt, const Player& player, const Room& room, std::vector<Projectile>& projectiles);
 	void		draw() const;
-
 };
 
 struct Room {
@@ -194,6 +234,7 @@ struct Game {
 	Player					_player;
 	Dungeon					_dungeon;
 	std::vector<Entity>		_enemies;
+	std::vector<Projectile>	_projectiles;
 	float					_time_elapsed;
 	int						_score;
 	int						_wave;
